@@ -113,6 +113,7 @@ if(rsocket_FOUND)
 			transport/rsocket/server/RSThriftRequests.cpp
 			transport/rsocket/server/RSRoutingHandler.cpp
     )
+    add_dependencies(thriftcpp2_transport_rsocket Config-cpp2-obj)
 	list(
 		APPEND thriftcpp2_sources
 		$<TARGET_OBJECTS:Config-cpp2-obj>
