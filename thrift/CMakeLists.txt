@@ -8,6 +8,11 @@ if(lib_only OR build_all)
   add_subdirectory(lib)
 endif(lib_only OR build_all)
 
+# Perf examples
+if(build_all)
+  add_subdirectory(perf)
+endif(build_all)
+
 # Install CMake package configuration files for thrift
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
