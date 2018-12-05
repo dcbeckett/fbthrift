@@ -45,7 +45,7 @@ add_library(
   protocol/TSimpleJSONProtocol.cpp
   ${reflection-cpp2-SOURCES}
 )
-add_dependencies(protocol reflection-cpp2-target)
+add_dependencies(protocol reflection-cpp2)
 target_link_libraries(
   protocol
   PUBLIC

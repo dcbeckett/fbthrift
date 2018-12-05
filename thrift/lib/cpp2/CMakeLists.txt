@@ -23,7 +23,7 @@ add_library(
   frozen/schema/MemorySchema.cpp
   ${frozen-cpp2-SOURCES}
 )
-add_dependencies(thriftfrozen2 frozen-cpp2-target)
+add_dependencies(thriftfrozen2 frozen-cpp2)
 target_link_libraries(
   thriftfrozen2
   PUBLIC

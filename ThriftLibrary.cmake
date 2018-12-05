@@ -6,115 +6,7 @@
 #   ${THRIFTCPP2} - path/to/lib/thriftcpp2
 #
 
-#
-# thrift_object
-# This creates a object that will contain the source files and all the proper
-# dependencies to generate and compile thrift generated files
-#
-# Params:
-#   @file_name - The name of the thrift file
-#   @services  - A list of services that are declared in the thrift file
-#   @language  - The generator to use (cpp or cpp2)
-#   @options   - Extra options to pass to the generator
-#   @file_path - The directory where the thrift file lives
-#   @output_path - The directory where the thrift objects will be built
-#   @include_prefix - The last part of output_path, relative include prefix
-#
-# Output:
-#  A object file named `${file-name}-${language}-obj` to include into your
-#  project's library
-#
-# Notes:
-# If any of the fields is empty, it is still required to provide an empty string
-#
-# Usage:
-#   thrift_object(
-#     #file_name
-#     #services
-#     #language
-#     #options
-#     #file_path
-#     #output_path
-#     #include_prefix
-#   )
-#   add_library(somelib $<TARGET_OBJECTS:${file_name}-${language}-obj> ...)
-#
-
-macro(thrift_object file_name services language options file_path output_path include_prefix)
-thrift_generate(
-  "${file_name}"
-  "${services}"
-  "${language}"
-  "${options}"
-  "${file_path}"
-  "${output_path}"
-  "${include_prefix}"
-)
-bypass_source_check(${${file_name}-${language}-SOURCES})
-add_library(
-  "${file_name}-${language}-obj"
-  OBJECT
-  ${${file_name}-${language}-SOURCES}
-)
-add_dependencies(
-  "${file_name}-${language}-obj"
-  "${file_name}-${language}-target"
-)
-message("Thrift will create the Object file : ${file_name}-${language}-obj")
-endmacro()
-
-# thrift_library
-# Same as thrift object in terms of usage but creates the library instead of
-# object so that you can use to link against your library instead of including
-# all symbols into your library
-#
-# Params:
-#   @file_name - The name of the thrift file
-#   @services  - A list of services that are declared in the thrift file
-#   @language  - The generator to use (cpp or cpp2)
-#   @options   - Extra options to pass to the generator
-#   @file_path - The directory where the thrift file lives
-#   @output_path - The directory where the thrift objects will be built
-#   @include_prefix - The last part of output_path, relative include prefix
-#
-# Output:
-#  A library file named `${file-name}-${language}` to link against your
-#  project's library
-#
-# Notes:
-# If any of the fields is empty, it is still required to provide an empty string
-#
-# Usage:
-#   thrift_library(
-#     #file_name
-#     #services
-#     #language
-#     #options
-#     #file_path
-#     #output_path
-#     #include_prefix
-#   )
-#   add_library(somelib ...)
-#   target_link_libraries(somelibe ${file_name}-${language} ...)
-#
-
-macro(thrift_library file_name services language options file_path output_path include_prefix)
-thrift_object(
-  "${file_name}"
-  "${services}"
-  "${language}"
-  "${options}"
-  "${file_path}"
-  "${output_path}"
-  "${include_prefix}"
-)
-add_library(
-  "${file_name}-${language}"
-  $<TARGET_OBJECTS:${file_name}-${language}-obj>
-)
-target_link_libraries("${file_name}-${language}" ${THRIFTCPP2})
-message("Thrift will create the Library file : ${file_name}-${language}")
-endmacro()
+include(CMakeParseArguments)
 
 #
 # bypass_source_check
@@ -133,83 +25,142 @@ set_source_files_properties(
 )
 endmacro()
 
+# add_thrift_library
 #
-# thrift_generate
-# This is used to codegen thrift files using the thrift compiler
-# Params:
-#   @file_name - The name of tge thrift file
-#   @services  - A list of services that are declared in the thrift file
-#   @language  - The generator to use (cpp or cpp2)
-#   @options   - Extra options to pass to the generator
-#   @output_path - The directory where the thrift file lives
+#   SYNTAX:
+#     add_thrift_library(
+#       target-name
+#       /path/to/input.thrift
+#       LANGUAGE language
+#       OUTPUT_PATH output_directory
+#       [SERVICES [svc1] [svc2] [svc3]...]
+#       [WORKING_DIRECTORY working_directory]
+#       [INSTALL]
+#       [OPTIONS additional_option1 [additional_option2] ...]
+#       [THRIFT_INCLUDE include_dir1 [include_dir2] ...]
+#       [GENERATED_INCLUDE_PREFIX include_prefix]
+#     )
 #
-# Output:
-#  file-language-target     - A custom target to add a dependenct
-#  ${file-language-HEADERS} - The generated Header Files.
-#  ${file-language-SOURCES} - The generated Source Files.
-#
-# Notes:
-# If any of the fields is empty, it is still required to provide an empty string
-#
-# When using file_language-SOURCES it should always call:
-#   bypass_source_check(${file_language-SOURCES})
-# This will prevent cmake from complaining about missing source files
-#
+# Creates a CMake library named target-name by generating source code based
+# on an input thrift file.
 
-macro(thrift_generate file_name services language options file_path output_path include_prefix)
-set("${file_name}-${language}-HEADERS"
-  ${output_path}/gen-${language}/${file_name}_constants.h
-  ${output_path}/gen-${language}/${file_name}_data.h
-  ${output_path}/gen-${language}/${file_name}_types.h
-  ${output_path}/gen-${language}/${file_name}_types.tcc
-)
-set("${file_name}-${language}-SOURCES"
-  ${output_path}/gen-${language}/${file_name}_constants.cpp
-  ${output_path}/gen-${language}/${file_name}_data.cpp
-  ${output_path}/gen-${language}/${file_name}_types.cpp
-)
-foreach(service ${services})
-  set("${file_name}-${language}-HEADERS"
-    ${${file_name}-${language}-HEADERS}
-    ${output_path}/gen-${language}/${service}.h
-    ${output_path}/gen-${language}/${service}.tcc
-    ${output_path}/gen-${language}/${service}AsyncClient.h
-    ${output_path}/gen-${language}/${service}_custom_protocol.h
-  )
-  set("${file_name}-${language}-SOURCES"
-    ${${file_name}-${language}-SOURCES}
-    ${output_path}/gen-${language}/${service}.cpp
-    ${output_path}/gen-${language}/${service}AsyncClient.cpp
-  )
-endforeach()
-set(include_prefix_text "include_prefix=${include_prefix}")
-if(NOT "${options}" STREQUAL "")
-  set(include_prefix_text ",${include_prefix_text}")
-endif()
-set(gen_language ${language})
-if("${language}" STREQUAL "cpp2")
-  set(gen_language "mstch_cpp2")
-endif()
-add_custom_command(
-  OUTPUT ${${file_name}-${language}-HEADERS} ${${file_name}-${language}-SOURCES}
-  COMMAND ${THRIFT1}
-    --gen "${gen_language}:${options}${include_prefix_text}"
-    -o ${output_path}
-    --templates ${THRIFT_TEMPLATES}
-    "${file_path}/${file_name}.thrift"
-  DEPENDS ${THRIFT1}
-  COMMENT "Generating ${file_name} files. Output: ${output_path}"
-)
-add_custom_target(
-  ${file_name}-${language}-target ALL
-  DEPENDS ${${language}-${language}-HEADERS} ${${file_name}-${language}-SOURCES}
-)
-install(
-  DIRECTORY gen-${language}
-  DESTINATION include/${include_prefix}
-  FILES_MATCHING PATTERN "*.h")
-install(
-  DIRECTORY gen-${language}
-  DESTINATION include/${include_prefix}
-  FILES_MATCHING PATTERN "*.tcc")
-endmacro()
+function(add_thrift_library)
+    cmake_parse_arguments(
+        ARG
+        "INSTALL"
+        "LANGUAGE;OUTPUT_PATH;GENERATED_INCLUDE_PREFIX"
+        "SERVICES;OPTIONS;THRIFT_INCLUDE"
+        ${ARGN}
+    )
+
+    list(LENGTH ARG_UNPARSED_ARGUMENTS num_positional_args)
+
+    if ((NOT ARG_OUTPUT_PATH) OR
+        (NOT ARG_LANGUAGE) OR
+        (num_positional_args LESS "2"))
+        message(FATAL_ERROR "Invalid invocation of add_thrift_library")
+    endif()
+
+    list(GET ARG_UNPARSED_ARGUMENTS 0 target_name)
+    list(GET ARG_UNPARSED_ARGUMENTS 1 input_path)
+    get_filename_component(input_name_noext ${input_path} NAME_WE)
+    get_filename_component(input_directory ${input_path} DIRECTORY)
+    set(language ${ARG_LANGUAGE})
+    set(output_path ${ARG_OUTPUT_PATH})
+    set(include_prefix ${ARG_GENERATED_INCLUDE_PREFIX})
+    set(options ${ARG_OPTIONS})
+
+    set("${input_name_noext}-${language}-HEADERS"
+      ${output_path}/gen-${language}/${input_name_noext}_constants.h
+      ${output_path}/gen-${language}/${input_name_noext}_data.h
+      ${output_path}/gen-${language}/${input_name_noext}_types.h
+      ${output_path}/gen-${language}/${input_name_noext}_types.tcc
+    )
+
+    set("${input_name_noext}-${language}-SOURCES"
+      ${output_path}/gen-${language}/${input_name_noext}_constants.cpp
+      ${output_path}/gen-${language}/${input_name_noext}_data.cpp
+      ${output_path}/gen-${language}/${input_name_noext}_types.cpp
+    )
+
+    foreach(service ${ARG_SERVICES})
+      set("${input_name_noext}-${language}-HEADERS"
+        ${${input_name_noext}-${language}-HEADERS}
+        ${output_path}/gen-${language}/${service}.h
+        ${output_path}/gen-${language}/${service}.tcc
+        ${output_path}/gen-${language}/${service}AsyncClient.h
+        ${output_path}/gen-${language}/${service}_custom_protocol.h
+      )
+      set("${input_name_noext}-${language}-SOURCES"
+        ${${input_name_noext}-${language}-SOURCES}
+        ${output_path}/gen-${language}/${service}.cpp
+        ${output_path}/gen-${language}/${service}AsyncClient.cpp
+      )
+    endforeach()
+
+    # cmake_parse_arguments parses multi-value arguments as lists (which are
+    # represented as semicolon delimited strings). Thrift expects options
+    # separated by commas
+    string(REPLACE ";" "," options "${ARG_OPTIONS}")
+
+    set(include_prefix_text "include_prefix=${include_prefix}")
+    if(NOT "${options}" STREQUAL "")
+      set(include_prefix_text ",${include_prefix_text}")
+    endif()
+    set(gen_language ${language})
+    if("${language}" STREQUAL "cpp2")
+      set(gen_language "mstch_cpp2")
+    endif()
+
+    foreach(incl ${ARG_THRIFT_INCLUDE})
+        list(APPEND thrift_includes -I ${incl})
+    endforeach()
+
+    set(invocation
+        ${THRIFT1}
+        --gen
+        ${gen_language}:${options}${include_prefix_text}
+        -o ${output_path}
+        --templates ${THRIFT_TEMPLATES}
+        ${thrift_includes}
+        ${input_path})
+
+    add_custom_command(
+      OUTPUT ${${input_name_noext}-${language}-HEADERS} ${${input_name_noext}-${language}-SOURCES}
+      COMMAND ${invocation}
+      DEPENDS ${THRIFT1}
+      WORKING_DIRECTORY ${ARG_WORKING_DIRECTORY}
+      COMMENT "Generating ${input_name_noext} files. Output: ${output_path}"
+    )
+
+    add_custom_target(
+      ${target_name}-gen ALL
+      DEPENDS
+        ${${language}-${language}-HEADERS}
+        ${${input_name_noext}-${language}-SOURCES}
+    )
+
+    if(ARG_INSTALL)
+        install(
+          DIRECTORY gen-${language}
+          DESTINATION include/${include_prefix}
+          FILES_MATCHING PATTERN "*.h")
+        install(
+          DIRECTORY gen-${language}
+          DESTINATION include/${include_prefix}
+          FILES_MATCHING PATTERN "*.tcc")
+    endif()
+
+
+    bypass_source_check(${${input_name_noext}-${language}-SOURCES})
+    add_library(
+      ${target_name}
+      ${${input_name_noext}-${language}-SOURCES}
+    )
+    add_dependencies(
+      "${target_name}"
+      "${target_name}-gen"
+    )
+
+    target_link_libraries(${target_name} PUBLIC ${THRIFTCPP2})
+endfunction()
