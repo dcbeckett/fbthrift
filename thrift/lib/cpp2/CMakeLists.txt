@@ -3,6 +3,11 @@ set(LIB_CPP2_HOME ${CMAKE_CURRENT_SOURCE_DIR})
 set(THRIFT_TEMPLATES_DIR ${THRIFT_HOME}/thrift/compiler/generate/templates)
 
 
+set(final_exported_targets
+    thriftfrozen2
+    thriftprotocol
+    thriftcpp2
+)
 #######
 # CMAKE variables only have local/subdirectory scope
 # So even though this is defined in ../thrift/CMakeLists.txt as a variable
@@ -54,9 +59,8 @@ target_link_libraries(
 )
 
 bypass_source_check("${RpcMetadata-cpp2-SOURCES}")
-add_library(
-  thriftcpp2
 
+set(thriftcpp2_sources
   FrozenTApplicationException.cpp
   GeneratedCodeHelper.cpp
   async/AsyncClient.cpp
@@ -77,16 +81,73 @@ add_library(
   server/ThriftServer.cpp
   server/peeking/TLSHelper.cpp
   transport/core/ThriftProcessor.cpp
+  transport/core/ThriftClient.cpp
+  transport/core/ThriftClientCallback.cpp
   util/ScopedServerInterfaceThread.cpp
   util/ScopedServerThread.cpp
   ${RpcMetadata-cpp2-SOURCES}
 )
-target_link_libraries(
-  thriftcpp2
-  PUBLIC
+
+set(thriftcpp2_libraries
     thrift
     thriftfrozen2
     thriftprotocol
+)
+
+
+if(rsocket_FOUND)
+    thrift_object2(
+        FILE Config
+        FILE_DIRECTORY ${LIB_CPP2_HOME}/transport/rsocket
+        OUTPUT_PATH ${LIB_CPP2_HOME}/transport/rsocket
+        LANGUAGE cpp2
+        GENERATED_INCLUDE_PREFIX "thrift/lib/cpp2/transport/rsocket"
+    )
+
+    add_library(
+		thriftcpp2_transport_rsocket
+		OBJECT
+			async/RSocketClientChannel.cpp
+			transport/rsocket/server/RSResponder.cpp
+			transport/rsocket/server/ManagedRSocketConnection.cpp
+			transport/rsocket/server/RSThriftRequests.cpp
+			transport/rsocket/server/RSRoutingHandler.cpp
+    )
+	list(
+		APPEND thriftcpp2_sources
+		$<TARGET_OBJECTS:Config-cpp2-obj>
+		$<TARGET_OBJECTS:thriftcpp2_transport_rsocket>
+    )
+    list(APPEND thriftcpp2_libraries rsocket::ReactiveSocket)
+endif()
+
+if (proxygen_FOUND)
+    add_library(
+        thriftcpp2_transport_h2
+   	    OBJECT
+			transport/http2/common/HTTP2RoutingHandler.cpp
+			async/HTTPClientChannel.cpp
+			server/proxygen/ProxygenThriftServer.cpp
+			transport/http2/server/ThriftRequestHandler.cpp
+			transport/http2/common/SingleRpcChannel.cpp
+			transport/http2/common/HTTP2RoutingHandler.cpp
+			transport/http2/client/ThriftTransactionHandler.cpp
+			transport/http2/client/H2ClientConnection.cpp
+			transport/http2/common/H2Channel.cpp
+	)
+ 	list(APPEND thriftcpp2_sources "$<TARGET_OBJECTS:thriftcpp2_transport_h2>")
+	list(APPEND thriftcpp2_libraries proxygen::proxygen)
+endif()
+
+
+add_library(
+  thriftcpp2
+  ${thriftcpp2_sources}
+)
+target_link_libraries(
+  thriftcpp2
+  PUBLIC
+  ${thriftcpp2_libraries}
 )
 
 # Install includes
@@ -107,10 +168,7 @@ foreach(dir ${THRIFT2_HEADER_DIRS})
 endforeach()
 
 install(
-  TARGETS
-    thriftfrozen2
-    thriftprotocol
-    thriftcpp2
+  TARGETS ${final_exported_targets}
   EXPORT fbthrift-exports
   DESTINATION ${LIB_INSTALL_DIR}
 )
