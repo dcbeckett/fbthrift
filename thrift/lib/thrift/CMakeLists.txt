@@ -1,38 +1,31 @@
 # Set the lib directory
 set(LIB_THRIFT_HOME ${CMAKE_CURRENT_SOURCE_DIR})
 
+# All of these generated thrift libraries will be included in either
+# thriftcpp2, thriftfrozen2, or thriftprotocol (which are all exported
+# libraries), so we compile them as object libraries.
 add_thrift_library(
-    RpcMetadata-cpp2
-    ${LIB_THRIFT_HOME}/reflection.thrift
+    RpcMetadata-cpp2 OBJECT
+    RpcMetadata.thrift
     LANGUAGE cpp2
     OPTIONS templates
-    OUTPUT_PATH ${LIB_THRIFT_HOME}
     GENERATED_INCLUDE_PREFIX thrift/lib/thrift
     INSTALL
 )
 
 add_thrift_library(
-    reflection-cpp2
-    ${LIB_THRIFT_HOME}/reflection.thrift
+    reflection-cpp2 OBJECT
+    reflection.thrift
     LANGUAGE cpp2
     OPTIONS templates
-    OUTPUT_PATH ${LIB_THRIFT_HOME}
     GENERATED_INCLUDE_PREFIX thrift/lib/thrift
     INSTALL
 )
 
 add_thrift_library(
-    frozen-cpp2
-    ${LIB_THRIFT_HOME}/frozen.thrift
+    frozen-cpp2 OBJECT
+    frozen.thrift
     LANGUAGE cpp2
-    OUTPUT_PATH ${LIB_THRIFT_HOME}
     GENERATED_INCLUDE_PREFIX thrift/lib/thrift
     INSTALL
 )
-
-get_property(RpcMetadata-cpp2-SOURCES TARGET RpcMetadata-cpp2 PROPERTY SOURCES)
-get_property(frozen-cpp2-SOURCES TARGET frozen-cpp2 PROPERTY SOURCES)
-get_property(reflection-cpp2-SOURCES TARGET reflection-cpp2 PROPERTY SOURCES)
-set_property(GLOBAL PROPERTY RpcMetadata-cpp2-SOURCES ${RpcMetadata-cpp2-SOURCES})
-set_property(GLOBAL PROPERTY frozen-cpp2-SOURCES ${frozen-cpp2-SOURCES})
-set_property(GLOBAL PROPERTY reflection-cpp2-SOURCES ${reflection-cpp2-SOURCES})

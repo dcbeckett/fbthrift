@@ -1,5 +1,3 @@
-get_property(reflection-cpp2-SOURCES GLOBAL PROPERTY reflection-cpp2-SOURCES)
-
 add_library(
   thrift-core
 
@@ -34,7 +32,6 @@ target_link_libraries(
     ${GLOG_LIBRARIES}
 )
 
-bypass_source_check("${reflection-cpp2-SOURCES}")
 add_library(
   protocol
 
@@ -43,7 +40,7 @@ add_library(
   protocol/TBase64Utils.cpp
   protocol/TProtocolException.cpp
   protocol/TSimpleJSONProtocol.cpp
-  ${reflection-cpp2-SOURCES}
+  $<TARGET_OBJECTS:reflection-cpp2>
 )
 add_dependencies(protocol reflection-cpp2)
 target_link_libraries(

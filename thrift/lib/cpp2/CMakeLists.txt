@@ -3,26 +3,15 @@ set(LIB_CPP2_HOME ${CMAKE_CURRENT_SOURCE_DIR})
 set(THRIFT_TEMPLATES_DIR ${THRIFT_HOME}/thrift/compiler/generate/templates)
 
 
-#######
-# CMAKE variables only have local/subdirectory scope
-# So even though this is defined in ../thrift/CMakeLists.txt as a variable
-# it's not accessible here and silently defaults to ""
-#
-# Using global properties gets around this; probably better to restructure
-# the directories/files to avoid this type of hack
-#
-get_property(RpcMetadata-cpp2-SOURCES GLOBAL PROPERTY RpcMetadata-cpp2-SOURCES)
-get_property(frozen-cpp2-SOURCES GLOBAL PROPERTY frozen-cpp2-SOURCES)
-
-bypass_source_check("${frozen-cpp2-SOURCES}")
 add_library(
   thriftfrozen2
 
   frozen/Frozen.cpp
   frozen/FrozenUtil.cpp
   frozen/schema/MemorySchema.cpp
-  ${frozen-cpp2-SOURCES}
+  $<TARGET_OBJECTS:frozen-cpp2>
 )
+
 add_dependencies(thriftfrozen2 frozen-cpp2)
 target_link_libraries(
   thriftfrozen2
@@ -53,7 +42,6 @@ target_link_libraries(
     wangle::wangle
 )
 
-bypass_source_check("${RpcMetadata-cpp2-SOURCES}")
 add_library(
   thriftcpp2
 
@@ -79,7 +67,7 @@ add_library(
   transport/core/ThriftProcessor.cpp
   util/ScopedServerInterfaceThread.cpp
   util/ScopedServerThread.cpp
-  ${RpcMetadata-cpp2-SOURCES}
+  $<TARGET_OBJECTS:RpcMetadata-cpp2>
 )
 target_link_libraries(
   thriftcpp2

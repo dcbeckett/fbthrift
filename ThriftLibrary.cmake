@@ -29,10 +29,10 @@ endmacro()
 #
 #   SYNTAX:
 #     add_thrift_library(
-#       target-name
+#       target-name [STATIC|SHARED|OBJECT]
 #       /path/to/input.thrift
 #       LANGUAGE language
-#       OUTPUT_PATH output_directory
+#       [OUTPUT_PATH] output_directory
 #       [SERVICES [svc1] [svc2] [svc3]...]
 #       [WORKING_DIRECTORY working_directory]
 #       [INSTALL]
@@ -47,28 +47,55 @@ endmacro()
 function(add_thrift_library)
     cmake_parse_arguments(
         ARG
-        "INSTALL"
+        "INSTALL;STATIC;SHARED;OBJECT"
         "LANGUAGE;OUTPUT_PATH;GENERATED_INCLUDE_PREFIX"
         "SERVICES;OPTIONS;THRIFT_INCLUDE"
         ${ARGN}
     )
 
+    # Positional args should be the target-name and the input-thrift-file
     list(LENGTH ARG_UNPARSED_ARGUMENTS num_positional_args)
 
-    if ((NOT ARG_OUTPUT_PATH) OR
-        (NOT ARG_LANGUAGE) OR
-        (num_positional_args LESS "2"))
+    # At most one of SHARED, STATIC, OBJECT may be specified. Detect this
+    # by combining them all into a list, and checking the list length.
+    if(${ARG_SHARED})
+        list(APPEND library_type SHARED)
+    endif()
+    if(${ARG_STATIC})
+        list(APPEND library_type STATIC)
+    endif()
+    if(${ARG_OBJECT})
+        list(APPEND library_type OBJECT)
+    endif()
+    list(LENGTH library_type num_library_types_specified)
+
+    # Check for required arguments
+    if ((NOT ARG_LANGUAGE) OR
+        (NOT (num_positional_args EQUAL 2)) OR
+        (num_library_types_specified GREATER 1))
         message(FATAL_ERROR "Invalid invocation of add_thrift_library")
     endif()
 
     list(GET ARG_UNPARSED_ARGUMENTS 0 target_name)
     list(GET ARG_UNPARSED_ARGUMENTS 1 input_path)
     get_filename_component(input_name_noext ${input_path} NAME_WE)
-    get_filename_component(input_directory ${input_path} DIRECTORY)
     set(language ${ARG_LANGUAGE})
     set(output_path ${ARG_OUTPUT_PATH})
     set(include_prefix ${ARG_GENERATED_INCLUDE_PREFIX})
     set(options ${ARG_OPTIONS})
+
+    # If output_path is not specified, default to the current binary directory
+    if("${output_path}" STREQUAL "")
+        set(output_path ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+
+    # If working_directory is not specified, by default run in
+    # CMAKE_CURRENT_SOURCE_DIR, so the input thrift file may be expressed
+    # as a relative path.
+    set(working_directory ${ARG_WORKING_DIRECTORY})
+    if("${working_directory}" STREQUAL "")
+        set(working_directory ${CMAKE_CURRENT_SOURCE_DIR})
+    endif()
 
     set("${input_name_noext}-${language}-HEADERS"
       ${output_path}/gen-${language}/${input_name_noext}_constants.h
@@ -129,7 +156,7 @@ function(add_thrift_library)
       OUTPUT ${${input_name_noext}-${language}-HEADERS} ${${input_name_noext}-${language}-SOURCES}
       COMMAND ${invocation}
       DEPENDS ${THRIFT1}
-      WORKING_DIRECTORY ${ARG_WORKING_DIRECTORY}
+      WORKING_DIRECTORY ${working_directory}
       COMMENT "Generating ${input_name_noext} files. Output: ${output_path}"
     )
 
@@ -154,13 +181,22 @@ function(add_thrift_library)
 
     bypass_source_check(${${input_name_noext}-${language}-SOURCES})
     add_library(
-      ${target_name}
+      ${target_name} ${library_type}
       ${${input_name_noext}-${language}-SOURCES}
     )
+
+    target_include_directories(
+        ${target_name}
+        PUBLIC
+            $<BUILD_INTERFACE:${output_path}>
+            $<INSTALL_INTERFACE:include>
+    )
+
     add_dependencies(
       "${target_name}"
       "${target_name}-gen"
     )
-
-    target_link_libraries(${target_name} PUBLIC ${THRIFTCPP2})
+    if(NOT ${ARG_OBJECT})
+        target_link_libraries(${target_name} INTERFACE ${THRIFTCPP2})
+    endif()
 endfunction()
