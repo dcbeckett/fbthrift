@@ -1,5 +1,3 @@
-get_property(reflection-cpp2-SOURCES GLOBAL PROPERTY reflection-cpp2-SOURCES)
-
 add_library(
   thrift-core
 
@@ -34,7 +32,6 @@ target_link_libraries(
     ${GLOG_LIBRARIES}
 )
 
-bypass_source_check("${reflection-cpp2-SOURCES}")
 add_library(
   protocol
 
@@ -43,9 +40,10 @@ add_library(
   protocol/TBase64Utils.cpp
   protocol/TProtocolException.cpp
   protocol/TSimpleJSONProtocol.cpp
-  ${reflection-cpp2-SOURCES}
+  protocol/THeaderProtocol.cpp
+  $<TARGET_OBJECTS:reflection-cpp2>
 )
-add_dependencies(protocol reflection-cpp2-target)
+
 target_link_libraries(
   protocol
   PUBLIC
@@ -149,4 +147,24 @@ install(
     thrift
   EXPORT fbthrift-exports
   DESTINATION ${LIB_INSTALL_DIR}
+)
+
+# Loadgen support (intentionally not installed)
+add_library(
+  thriftloadgen
+  test/loadgen/Controller.cpp
+  test/loadgen/LatencyMonitor.cpp
+  test/loadgen/LatencyScoreBoard.cpp
+  test/loadgen/LoadConfig.cpp
+  test/loadgen/QpsMonitor.cpp
+  test/loadgen/QpsScoreBoard.cpp
+  test/loadgen/RNG.cpp
+  test/loadgen/TerminalMonitor.cpp
+  test/loadgen/WeightedLoadConfig.cpp
+  test/loadgen/loadgen.cpp
+)
+target_link_libraries(
+  thriftloadgen PUBLIC
+  concurrency
+  protocol
 )
