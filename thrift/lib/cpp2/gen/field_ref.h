@@ -50,12 +50,21 @@ class field_ref {
     return {value_, is_set_};
   }
 
-  template <typename U>
+  template <typename U = T>
   THRIFT_NOLINK std::enable_if_t<std::is_assignable<T&, U>::value, field_ref&>
   operator=(U&& value) noexcept(std::is_nothrow_assignable<T&, U>::value) {
     value_ = std::forward<U>(value);
     is_set_ = true;
     return *this;
+  }
+
+  // Assignment from field_ref is intentionally not provided to prevent
+  // potential confusion between two possible behaviors, copying and reference
+  // rebinding. The copy_from method is provided instead.
+  THRIFT_NOLINK void copy_from(const field_ref& other) noexcept(
+      std::is_nothrow_assignable<T&, T>::value) {
+    value_ = other.value_;
+    is_set_ = other.is_set_;
   }
 
   THRIFT_NOLINK bool is_set() const noexcept {
@@ -96,13 +105,22 @@ class optional_field_ref {
     return {value_, is_set_};
   }
 
-  template <typename U>
+  template <typename U = T>
   THRIFT_NOLINK
       std::enable_if_t<std::is_assignable<T&, U>::value, optional_field_ref&>
       operator=(U&& value) noexcept(std::is_nothrow_assignable<T&, U>::value) {
     value_ = std::forward<U>(value);
     is_set_ = true;
     return *this;
+  }
+
+  // Assignment from optional_field_ref is intentionally not provided to prevent
+  // potential confusion between two possible behaviors, copying and reference
+  // rebinding. The copy_from method is provided instead.
+  THRIFT_NOLINK void copy_from(const optional_field_ref& other) noexcept(
+      std::is_nothrow_assignable<T&, T>::value) {
+    value_ = other.value_;
+    is_set_ = other.is_set_;
   }
 
   THRIFT_NOLINK bool has_value() const noexcept {

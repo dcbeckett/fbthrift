@@ -122,6 +122,18 @@ TEST(field_ref_test, assign) {
   EXPECT_EQ(*s.name(), "foo");
 }
 
+TEST(field_ref_test, copy_from) {
+  auto s = TestStruct();
+  auto s2 = TestStruct();
+  s.name() = "foo";
+  s.name().copy_from(s2.name());
+  EXPECT_FALSE(s.name().is_set());
+  s2.name() = "foo";
+  s.name().copy_from(s2.name());
+  EXPECT_TRUE(s.name().is_set());
+  EXPECT_EQ(*s.name(), "foo");
+}
+
 template <template <typename> class FieldRef>
 void check_is_assignable() {
   using IntAssignableRef = FieldRef<IntAssignable>;
@@ -186,6 +198,11 @@ TEST(field_ref_test, mutable_accessors) {
   EXPECT_FALSE(name.is_set());
 }
 
+TEST(field_ref_test, copy_list_initialization) {
+  TestStruct s;
+  s.name() = {};
+}
+
 TEST(optional_field_ref_test, access_default_value) {
   auto s = TestStruct();
   EXPECT_THROW(*s.opt_name(), bad_field_access);
@@ -196,6 +213,18 @@ TEST(optional_field_ref_test, assign) {
   auto s = TestStruct();
   EXPECT_FALSE(s.opt_name().has_value());
   s.opt_name() = "foo";
+  EXPECT_TRUE(s.opt_name().has_value());
+  EXPECT_EQ(*s.opt_name(), "foo");
+}
+
+TEST(optional_field_ref_test, copy_from) {
+  auto s = TestStruct();
+  auto s2 = TestStruct();
+  s.opt_name() = "foo";
+  s.opt_name().copy_from(s2.opt_name());
+  EXPECT_FALSE(s.opt_name().has_value());
+  s2.opt_name() = "foo";
+  s.opt_name().copy_from(s2.opt_name());
   EXPECT_TRUE(s.opt_name().has_value());
   EXPECT_EQ(*s.opt_name(), "foo");
 }
@@ -279,4 +308,9 @@ TEST(optional_field_ref_test, convert_to_bool) {
     EXPECT_TRUE(false);
   }
   EXPECT_FALSE((std::is_convertible<decltype(s.opt_name()), bool>::value));
+}
+
+TEST(optional_field_ref_test, copy_list_initialization) {
+  TestStruct s;
+  s.opt_name() = {};
 }

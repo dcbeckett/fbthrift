@@ -199,7 +199,7 @@ class BaseThriftServer : public apache::thrift::concurrency::Runnable,
   std::atomic<int32_t> activeRequests_{0};
 
   // Admission strategy use for accepting new requests
-  folly::Synchronized<std::shared_ptr<AdmissionStrategy>> admissionStrategy_;
+  ServerAttribute<std::shared_ptr<AdmissionStrategy>> admissionStrategy_;
 
  protected:
   //! The server's listening address
@@ -268,6 +268,18 @@ class BaseThriftServer : public apache::thrift::concurrency::Runnable,
  public:
   std::shared_ptr<server::TServerEventHandler> getEventHandler() {
     return eventHandler_;
+  }
+
+  /**
+   * If a view of the event handler is needed that does not need to extend its
+   * lifetime beyond that of the BaseThriftServer, this method allows obtaining
+   * the raw pointer rather than the more expensive shared_ptr.
+   * Since unsynchronized setServerEventHandler / getEventHandler calls are not
+   * permitted, use cases that get the handler, inform it of some action, and
+   * then discard the handle immediately can use getEventHandlerUnsafe.
+   */
+  server::TServerEventHandler* getEventHandlerUnsafe() {
+    return eventHandler_.get();
   }
 
   void setServerEventHandler(
@@ -885,15 +897,16 @@ class BaseThriftServer : public apache::thrift::concurrency::Runnable,
    * Set the admission strategy used by the Thrift Server
    */
   void setAdmissionStrategy(
-      std::shared_ptr<AdmissionStrategy> admissionStrategy) {
-    admissionStrategy_ = std::move(admissionStrategy);
+      std::shared_ptr<AdmissionStrategy> admissionStrategy,
+      AttributeSource source = AttributeSource::OVERRIDE) {
+    admissionStrategy_.set(std::move(admissionStrategy), source);
   }
 
   /**
    * Return the admission strategy associated with the Thrift Server
    */
   std::shared_ptr<AdmissionStrategy> getAdmissionStrategy() const {
-    return admissionStrategy_.copy();
+    return admissionStrategy_.get();
   }
 };
 } // namespace thrift
