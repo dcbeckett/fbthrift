@@ -79,7 +79,7 @@ set(thriftcpp2_libraries
 )
 
 
-if(rsocket_FOUND)
+if(rsocket_FOUND AND BUILD_THRIFT_RSOCKET)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/transport/rsocket)
     add_thrift_library(
       Config-cpp2-obj OBJECT
