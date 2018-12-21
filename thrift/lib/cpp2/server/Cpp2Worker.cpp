@@ -31,6 +31,10 @@
 #include <wangle/acceptor/SSLAcceptorHandshakeHelper.h>
 #include <wangle/acceptor/UnencryptedAcceptorHandshakeHelper.h>
 
+#ifdef HAVE_FB_KTLS
+#include <openssl/ssl_fb.h>
+#endif
+
 DEFINE_int32(pending_interval, 0, "Pending count interval in ms");
 
 namespace apache {
@@ -152,6 +156,36 @@ std::shared_ptr<async::TAsyncTransport> Cpp2Worker::createThriftTransport(
 void Cpp2Worker::markSocketAccepted(TAsyncSocket* sock) {
   sock->setIsAccepted(true);
   sock->setShutdownSocketSet(server_->wShutdownSocketSet_);
+}
+
+void Cpp2Worker::sslConnectionReady(
+    folly::AsyncTransportWrapper::UniquePtr sock,
+    const folly::SocketAddress& clientAddr,
+    const std::string& nextProtocol,
+    wangle::SecureTransportType secureTransportType,
+    wangle::TransportInfo& tinfo) {
+#ifdef HAVE_FB_KTLS
+    if (server_->useKtls_) {
+      auto sslSocket =
+          sock->getUnderlyingTransport<folly::AsyncSSLSocket>();
+      CHECK(sslSocket) << "Underlying socket in sslConnectionReady should be folly::AsyncSSLSocket()";
+      SSL* s = const_cast<SSL*>(sslSocket->getSSL());
+      int rc = SSL_fb_configure_ktls(s);
+      if (rc != 1) {
+        LOG(ERROR) << "SSL_fb_configure_ktls failure: return code " << rc;
+      } else {
+        LOG_EVERY_N(INFO, 1000) << "(sampled) configured ktls successfully on client "
+                                << clientAddr.getAddressStr();
+        auto evb = sslSocket->getEventBase();
+        auto zc = sslSocket->getZeroCopyBufId();
+        auto fd = sslSocket->detachFd();
+        sock.reset(new TAsyncSocket(folly::AsyncSocket::UniquePtr(
+            new folly::AsyncSocket(evb, fd, zc))));
+      }
+    }
+#endif
+    wangle::Acceptor::sslConnectionReady(
+        std::move(sock), clientAddr, nextProtocol, secureTransportType, tinfo);
 }
 
 void Cpp2Worker::plaintextConnectionReady(

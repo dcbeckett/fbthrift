@@ -29,7 +29,15 @@
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 #include <thrift/perf/cpp/ClientLoadConfig.h>
 
+#include <gflags/gflags.h>
+
+#ifdef HAVE_FB_KTLS
+#include <openssl/ssl_fb.h>
+#endif
+
 #include <queue>
+
+DECLARE_bool(enable_ktls);
 
 using namespace boost;
 using namespace apache::thrift::protocol;
@@ -170,7 +178,27 @@ LoadTestClientPtr AsyncClientWorker2::createConnection() {
     if (config->useTickets() && sslSocket->getSSLSession()) {
       session_.reset(sslSocket->getSSLSession());
     }
+
+#ifdef HAVE_FB_KTLS
+    if (FLAGS_enable_ktls) {
+        SSL* s = const_cast<SSL*>(sslSocket->getSSL());
+        int rc = SSL_fb_configure_ktls(s);
+        if (rc != 1) {
+            LOG(ERROR) << "SSL_fb_configure_ktls failure in createConnection(). return code" << rc;
+        } else {
+            auto evb = sslSocket->getEventBase();
+            auto zc = sslSocket->getZeroCopyBufId();
+            auto fd = sslSocket->detachFd();
+            socket.reset(new TAsyncSocket(folly::AsyncSocket::UniquePtr(
+                new folly::AsyncSocket(evb, fd, zc))));
+            LOG_EVERY_N(INFO, 10000) << "(sampled) successfully configured ktls on connection";
+        }
+    } else {
+#endif
     socket = std::move(sslSocket);
+#ifdef HAVE_FB_KTLS
+    }
+#endif
   } else {
     socket = TAsyncSocket::newSocket(&eb_, *config->getAddress(), kTimeout);
   }

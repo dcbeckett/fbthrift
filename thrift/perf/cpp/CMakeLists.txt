@@ -3,6 +3,11 @@ add_library(
   AsyncLoadHandler2.cpp
 )
 
+add_library(
+  utils
+  Utils.cpp
+)
+
 target_link_libraries(
   async-load-handler
   load-cpp2
@@ -20,6 +25,7 @@ add_executable(
 target_link_libraries(
   loadgen
   async-load-handler
+  utils
 )
 
 add_executable(
@@ -29,4 +35,5 @@ add_executable(
 target_link_libraries(
   ThriftServer
   async-load-handler
+  utils
 )

@@ -144,11 +144,31 @@ if (proxygen_FOUND)
 endif()
 
 
+include(CheckCSourceCompiles)
+set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+check_c_source_compiles("
+#include <openssl/opensslconf.h>
+int main() {
+#ifdef OPENSSL_FB_HAVE_KTLS_SUPPORT
+    return 0;
+#else
+    return this_will_not_compile;
+#endif
+}"
+HAVE_FB_KTLS)
+
+
 add_library(
   thriftcpp2
   ${thriftcpp2_sources}
   ${thriftcpp2_objects}
 )
+
+if (HAVE_FB_KTLS)
+    message("Including ktls support")
+    target_compile_definitions(thriftcpp2 PUBLIC HAVE_FB_KTLS)
+endif()
+
 target_link_libraries(
   thriftcpp2
   PUBLIC

@@ -28,7 +28,10 @@
 
 #include <signal.h>
 
+#include "Utils.h"
+
 DEFINE_double(interval, 1.0, "number of seconds between statistics output");
+DEFINE_bool(enable_ktls, false, "Enable ktls (experimental");
 
 using namespace boost;
 using namespace apache::thrift;
@@ -36,6 +39,7 @@ using namespace apache::thrift::test;
 
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv, true);
+  loadgen_utils::verify_ktls_compatibility();
 
   signal(SIGINT, exit);
 

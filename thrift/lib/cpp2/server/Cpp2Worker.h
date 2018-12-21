@@ -172,6 +172,12 @@ class Cpp2Worker : public wangle::Acceptor,
       wangle::SecureTransportType secureTransportType,
       wangle::TransportInfo& tinfo) override;
 
+  void sslConnectionReady(folly::AsyncTransportWrapper::UniquePtr sock,
+                          const folly::SocketAddress &clientAddr,
+                          const std::string &nextProtocol,
+                          wangle::SecureTransportType secureTransportType,
+                          wangle::TransportInfo &tinfo) override;
+
   void requestStop();
 
   void waitForStop(std::chrono::system_clock::time_point deadline);

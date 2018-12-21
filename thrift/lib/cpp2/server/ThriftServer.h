@@ -81,6 +81,7 @@ class ThriftServer : public apache::thrift::BaseThriftServer,
   // Security negotiation settings
   SSLPolicy sslPolicy_ = SSLPolicy::PERMITTED;
   bool strictSSL_ = false;
+  bool useKtls_ = false;
 
   std::weak_ptr<folly::ShutdownSocketSet> wShutdownSocketSet_;
 
@@ -289,6 +290,12 @@ class ThriftServer : public apache::thrift::BaseThriftServer,
     namedFactory->setNamePrefix(cpp2WorkerThreadName);
   }
 
+  // Experimental: Use kTLS if possible
+  void setUseKtls(bool flag) {
+#ifdef HAVE_FB_KTLS
+    useKtls_ = flag;
+#endif
+  }
   /**
    * Number of connections that epoll says need attention but ThriftServer
    * didn't have a chance to "ack" yet. A rough proxy for a number of pending

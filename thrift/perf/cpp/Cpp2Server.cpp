@@ -20,7 +20,9 @@
  */
 #include <signal.h>
 #include <iostream>
+#include <algorithm>
 
+#include <folly/Conv.h>
 #include <folly/Random.h>
 #include <folly/String.h>
 #include <folly/init/Init.h>
@@ -28,6 +30,8 @@
 
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/perf/cpp/AsyncLoadHandler2.h>
+
+#include "Utils.h"
 
 using std::cout;
 using namespace boost;
@@ -67,6 +71,7 @@ DEFINE_string(ecc_curve, "prime256v1",
     "The ECC curve to use for EC handshakes");
 DEFINE_bool(enable_tfo, true, "Enable TFO");
 DEFINE_int32(tfo_queue_size, 1000, "TFO queue size");
+DEFINE_bool(enable_ktls, false, "(experimental) enable kTLS support");
 
 void setTunables(ThriftServer* server) {
   if (FLAGS_idle_timeout > 0) {
@@ -78,6 +83,10 @@ void setTunables(ThriftServer* server) {
   if (FLAGS_handshake_timeout > 0) {
     server->setSSLHandshakeTimeout(
         std::chrono::milliseconds(FLAGS_handshake_timeout));
+  }
+  if (FLAGS_enable_ktls) {
+    loadgen_utils::verify_ktls_compatibility();
+    server->setUseKtls(FLAGS_enable_ktls);
   }
 }
 
