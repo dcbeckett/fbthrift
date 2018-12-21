@@ -48,7 +48,7 @@ void verify_ktls_compatibility() {
     }
 
   // Check for the presence of the 'tls' module
-  std::ifstream f("/proc/modules"), std::ifstream::text;
+  std::ifstream f("/proc/modules");
   bool found = false;
   while (f.good()) {
     char buf[64];
